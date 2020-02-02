@@ -5,7 +5,6 @@ from surprise import Dataset
 from surprise import Reader
 from surprise import SVD
 from sqlalchemy import create_engine
-import pymysql
 
 app = Flask(__name__)
 

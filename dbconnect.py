@@ -3,7 +3,7 @@ import pandas as pd
 from sqlalchemy import create_engine
 
 
-def load_from_db(sql):
+def load_from_db(sql, param):
   mydb = mysql.connector.connect(
     host="db4free.net",
     user="app_root",
@@ -12,7 +12,7 @@ def load_from_db(sql):
   )
 
   mycursor = mydb.cursor()
-  mycursor.execute(sql)
+  mycursor.execute(sql, param)
   myresult = mycursor.fetchall()
   mycursor.close()
 

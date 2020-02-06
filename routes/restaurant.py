@@ -26,6 +26,7 @@ def recommend_restaurant(user_id):
     testset = [[user_id, iid, 4.] for iid in iids_to_pred]
     predictions = alg.test(testset)
     predictions.sort(key=lambda x: x.est, reverse=True)
+    list_of_ids = []
     for i in range(20):
-        print(predictions[i])
-    return ""
+        list_of_ids.append(int(predictions[i].iid))
+    return json.dumps(list_of_ids)

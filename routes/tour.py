@@ -26,9 +26,7 @@ def recommend_tour(user_id):
     testset = [[user_id, iid, 4.] for iid in iids_to_pred]
     predictions = alg.test(testset)
     predictions.sort(key=lambda x: x.est, reverse=True)
-    # predictions = tuple(predictions)
-    # params = {'list': predictions}
-    # get_tour_sql = 'SELECT * FROM tour where id in %(list)s'
-
-    print(predictions)
-    return ""
+    list_of_ids = []
+    for i in range(50):
+        list_of_ids.append(int(predictions[i].iid))
+    return json.dumps(list_of_ids)

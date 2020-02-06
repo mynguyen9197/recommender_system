@@ -31,7 +31,7 @@ def recommend_place(user_id):
         predictions = alg.test(testset)
         predictions.sort(key=lambda x: x.est, reverse=True)
         list_of_ids = []
-        for i in range(20 if len(predictions) >= 20 else len(predictions)):
+        for i in range(50 if len(predictions) >= 50 else len(predictions)):
             list_of_ids.append(int(predictions[i].iid))
         return json.dumps(list_of_ids), 200
     return "", 400

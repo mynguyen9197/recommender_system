@@ -20,7 +20,7 @@ def load_from_db(sql):
 
 
 def read_data_from_db(sql):
-    db_connection_str = 'mysql+pymysql://app_root:mysql@12345678@db4free.net/hoian_travel'
+    db_connection_str = 'mysql+pymysql://root:mysql@12345678@localhost/hoian_travel'
     db_connection = create_engine(db_connection_str, pool_recycle=3600)
 
     df = pd.read_sql(sql, db_connection)

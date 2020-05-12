@@ -1,6 +1,8 @@
 from flask import Blueprint
 from dbconnect import load_from_db
 from dbconnect import read_data_from_db
+from recs.content_based import get_item_profile
+from recs.content_based import _concatenate_cats_of_item
 import json
 import numpy as np
 from surprise import Dataset
@@ -35,22 +37,18 @@ def recommend_place(user_id):
             list_of_ids.append(int(predictions[i].iid))
         return json.dumps(list_of_ids), 200
     return "", 400
+    
 
-# def content_based_recommend(name):
-#     sql = 'SELECT id, name, about FROM place'
-#     ds = read_data_from_db(sql)
-#     tfidf = TfidfVectorizer(stop_words='english')
-#     ds['about'] = ds['about'].fillna('')
-#     tfidf_matrix = tfidf.fit_transform(ds['about'])
-#     cosine_sim = linear_kernel(tfidf_matrix, tfidf_matrix)
-#     indices = pd.Series(ds.index, index=ds['name']).drop_duplicates()
-#
-#     idx=indices[name]
-#     sim_scores = list(enumerate(cosine_sim(idx)))
-#     sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
-#     sim_scores = sim_scores[1:11]
-#     place_indices = [i[0] for i in sim_scores]
-#     list_places = ds['name'].iloc[place_indices]
-#     for i in range(10):
-#         return list_places[i]
-#     return ds['name'].iloc[place_indices]
+@place_api.route('/place/detail/<int:place_id>')
+def recommend_similar_place(place_id):
+    sql = 'SELECT id, place_id, activity_id FROM activity_place where stt=1;'
+    ds = read_data_from_db(sql)
+    df_cat_per_item = ds.groupby('place_id')['activity_id'].agg(_concatenate_cats_of_item)
+    df_cat_per_item.name = 'item_cats'
+    df_cat_per_item = df_cat_per_item.reset_index()
+    df_cat_per_item[~df_cat_per_item.item_cats.isnull()].reset_index(drop=True)
+
+    tour_profile = get_item_profile(df_cat_per_item)
+    simi_items = tour_profile.iloc[place_id-1].sort_values(ascending=False)[:20]
+    simi_items = [int(x+1) for x in simi_items.index.values]
+    return json.dumps(simi_items)

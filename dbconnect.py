@@ -19,12 +19,11 @@ def load_from_db(sql):
   return myresult
 
 
-def read_data_from_db(sql):
+def read_data_from_db(sql, param):
     db_connection_str = 'mysql+pymysql://root:mysql@12345678@localhost/hoian_travel'
     db_connection = create_engine(db_connection_str, pool_recycle=3600)
 
-    df = pd.read_sql(sql, db_connection)
-    pd.read_sql(sql, db_connection)
+    df = pd.read_sql(sql, db_connection, params=param)
     pd.set_option('display.expand_frame_repr', False)
 
     return df

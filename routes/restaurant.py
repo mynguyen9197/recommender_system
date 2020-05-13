@@ -15,7 +15,7 @@ restaurant_api = Blueprint('restaurant_api', __name__)
 @restaurant_api.route('/restaurant/<int:user_id>')
 def recommend_restaurant(user_id):
     sql = 'SELECT user_id, res_id, rating FROM rating_restaurant'
-    ds = read_data_from_db(sql)
+    ds = read_data_from_db(sql, None)
 
     reader = Reader()
     data = Dataset.load_from_df(ds[['user_id', 'res_id', 'rating']], reader=reader)
@@ -37,19 +37,19 @@ def recommend_restaurant(user_id):
 @restaurant_api.route('/restaurant/detail/<int:restaurant_id>')
 def recommend_similar_restaurant(restaurant_id):
     cuisine_sql = 'SELECT id, cuisine_id, res_id FROM cuisine_restaurant where stt=1;'
-    ds = read_data_from_db(cuisine_sql)
+    ds = read_data_from_db(cuisine_sql, None)
     df_cuisine_per_item = ds.groupby('res_id')['cuisine_id'].agg(_concatenate_cuisine_of_item)
 
     feature_sql = 'SELECT id, feature_id, res_id FROM feature_restaurant where stt=1;'
-    ds = read_data_from_db(feature_sql)
+    ds = read_data_from_db(feature_sql, None)
     df_feature_per_item = ds.groupby('res_id')['feature_id'].agg(_concatenate_feature_of_item)
 
     meal_sql = 'SELECT id, meal_id, res_id FROM meal_restaurant where stt=1;'
-    ds = read_data_from_db(meal_sql)
+    ds = read_data_from_db(meal_sql, None)
     df_meal_per_item = ds.groupby('res_id')['meal_id'].agg(_concatenate_meal_of_item)
 
     type_sql ='SELECT id, type_id, res_id FROM foodtype_restaurant where stt=1;'
-    ds = read_data_from_db(type_sql)
+    ds = read_data_from_db(type_sql, None)
     df_type_per_item = ds.groupby('res_id')['type_id'].agg(_concatenate_type_of_item)
 
     df_data = pd.merge(df_cuisine_per_item, df_feature_per_item, how='left', on='res_id')

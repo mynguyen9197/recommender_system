@@ -3,15 +3,16 @@ from dbconnect import load_from_db
 from dbconnect import read_data_from_db
 from recs.content_based import get_item_profile
 from recs.content_based import _concatenate_cats_of_item
+from recs.content_based import get_user_profile
 import json
 import numpy as np
 from surprise import Dataset
 from surprise import Reader
 from surprise import SVD
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import linear_kernel
 from sklearn.metrics.pairwise import cosine_similarity
 import pandas as pd
+from flask import Response
 
 place_api = Blueprint('place_api', __name__)
 
@@ -36,7 +37,8 @@ def recommend_place(user_id):
         list_of_ids = []
         for i in range(50 if len(predictions) >= 50 else len(predictions)):
             list_of_ids.append(int(predictions[i].iid))
-        return json.dumps(list_of_ids), 200
+        similar_places = get_list_db_objects_from_ids(tuple(list_of_ids))
+        return Response(similar_places.to_json(orient="records"), mimetype='application/json')
     return "", 400
     
 
@@ -46,8 +48,9 @@ def recommend_similar_place(place_id):
 
     place_profile = get_item_profile(df_cat_per_item)
     simi_items = place_profile.iloc[place_id-1].sort_values(ascending=False)[:20]
-    simi_items = [int(x+1) for x in simi_items.index.values]
-    return json.dumps(simi_items)
+    simi_items = tuple(int(x+1) for x in simi_items.index.values)
+    similar_places = get_list_db_objects_from_ids(simi_items)
+    return Response(similar_places.to_json(orient="records"), mimetype='application/json')
 
 
 @place_api.route('/place/similarity/<int:user_id>')
@@ -58,17 +61,11 @@ def recommend_similar_place_user_viewed(user_id):
 
     df_cat_per_item = get_cat_per_item()
     user_data_with_cat_of_items = df_cat_per_item.reset_index().merge(ds, on='place_id')
-    max_times = user_data_with_cat_of_items['times'].max()
-    user_data_with_cat_of_items['weight'] = user_data_with_cat_of_items['times']/max_times
-    tf_idf = TfidfVectorizer()
-    df_items_tf_idf_cats = tf_idf.fit_transform(df_cat_per_item.item_cats)
-    user_profile = np.dot(df_items_tf_idf_cats[user_data_with_cat_of_items['index'].values].toarray().T, 
-            user_data_with_cat_of_items['weight'].values)
-    C = cosine_similarity(np.atleast_2d(user_profile), df_items_tf_idf_cats)
-    R = np.argsort(C)[:, ::-1]
-    recommendations = [i for i in R[0] if i not in user_data_with_cat_of_items['index'].values]
+    recommendations = get_user_profile(user_data_with_cat_of_items, df_cat_per_item)
     print(df_cat_per_item['item_cats'][recommendations])
-    return 'return'
+    simi_items = tuple(int(x+1) for x in recommendations)
+    similar_places = get_list_db_objects_from_ids(simi_items)
+    return Response(similar_places.to_json(orient="records"), mimetype='application/json')
 
 
 def get_cat_per_item():
@@ -79,3 +76,11 @@ def get_cat_per_item():
     df_cat_per_item = df_cat_per_item.reset_index()
     df_cat_per_item[~df_cat_per_item.item_cats.isnull()].reset_index(drop=True)
     return df_cat_per_item
+
+
+def get_list_db_objects_from_ids(tuple_of_item):
+    simi_items_as_string=','.join(map(str,tuple_of_item))
+    get_simi_items_query = "SELECT * FROM place where id in %(simi_items)s ORDER BY FIND_IN_SET(id, %(ordered_list)s);"
+    params = {"simi_items" : tuple_of_item, "ordered_list": simi_items_as_string}
+    ds = read_data_from_db(get_simi_items_query, params)
+    return ds

@@ -2,12 +2,14 @@ from flask import Blueprint
 from dbconnect import load_from_db
 from dbconnect import read_data_from_db
 from recs.content_based import get_item_profile
+from recs.content_based import get_user_profile
 import json
 import numpy as np
 from surprise import Dataset
 from surprise import Reader
 from surprise import SVD
 import pandas as pd
+from flask import Response
 
 restaurant_api = Blueprint('restaurant_api', __name__)
 
@@ -31,11 +33,37 @@ def recommend_restaurant(user_id):
     list_of_ids = []
     for i in range(50):
         list_of_ids.append(int(predictions[i].iid))
-    return json.dumps(list_of_ids)
+    similar_restaurants = get_list_db_objects_from_ids(tuple(list_of_ids))
+    return Response(similar_restaurants.to_json(orient="records"), mimetype='application/json')
 
 
 @restaurant_api.route('/restaurant/detail/<int:restaurant_id>')
 def recommend_similar_restaurant(restaurant_id):
+    df_cat_per_item = get_cat_per_item()
+
+    restaurant_profile = get_item_profile(df_cat_per_item)
+    simi_items = restaurant_profile.iloc[restaurant_id-1].sort_values(ascending=False)[:20]
+    simi_items = tuple(int(x+1) for x in simi_items.index.values)
+    similar_restaurants = get_list_db_objects_from_ids(simi_items)
+    return Response(similar_restaurants.to_json(orient="records"), mimetype='application/json')
+
+
+@restaurant_api.route('/restaurant/similarity/<int:user_id>')
+def recommend_similar_restaurant_user_viewed(user_id):
+    sql = "SELECT count(*) as times, rest_id as res_id FROM restaurant_user_log where user_id=%(user_id)s and rest_id!='' group by rest_id;"
+    params = {"user_id" : int(user_id)}
+    ds = read_data_from_db(sql, params)
+
+    df_cat_per_item = get_cat_per_item()
+    user_data_with_cat_of_items = df_cat_per_item.reset_index().merge(ds, on='res_id')
+    recommendations = get_user_profile(user_data_with_cat_of_items, df_cat_per_item)
+    print(df_cat_per_item['item_cats'][recommendations])
+    simi_items = tuple(int(x+1) for x in recommendations)
+    similar_restaurants = get_list_db_objects_from_ids(simi_items)
+    return Response(similar_restaurants.to_json(orient="records"), mimetype='application/json')
+
+
+def get_cat_per_item():
     cuisine_sql = 'SELECT id, cuisine_id, res_id FROM cuisine_restaurant where stt=1;'
     ds = read_data_from_db(cuisine_sql, None)
     df_cuisine_per_item = ds.groupby('res_id')['cuisine_id'].agg(_concatenate_cuisine_of_item)
@@ -58,12 +86,7 @@ def recommend_similar_restaurant(restaurant_id):
     serie_data = df_data[df_data.columns[0:]].apply(
             lambda x: ' '.join(x.dropna().astype(str)), axis=1)
     df_cat_per_item = pd.DataFrame({'res_id':serie_data.index, 'item_cats':serie_data.values})
-
-    restaurant_profile = get_item_profile(df_cat_per_item)
-    simi_items = restaurant_profile.iloc[restaurant_id-1].sort_values(ascending=False)[:20]
-    print(simi_items)
-    simi_items = [int(x+1) for x in simi_items.index.values]
-    return json.dumps(simi_items)
+    return df_cat_per_item
 
 
 def _concatenate_cuisine_of_item(cats):
@@ -84,3 +107,11 @@ def _concatenate_meal_of_item(cats):
 def _concatenate_type_of_item(cats):
     cats_as_str = ' '.join(set(map(lambda x: 't_' + str(x), cats)))
     return cats_as_str
+
+
+def get_list_db_objects_from_ids(tuple_of_item):
+    simi_items_as_string=','.join(map(str,tuple_of_item))
+    get_simi_items_query = "SELECT * FROM restaurant where id in %(simi_items)s ORDER BY FIND_IN_SET(id, %(ordered_list)s);"
+    params = {"simi_items" : tuple_of_item, "ordered_list": simi_items_as_string}
+    ds = read_data_from_db(get_simi_items_query, params)
+    return ds

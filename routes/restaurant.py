@@ -16,51 +16,66 @@ restaurant_api = Blueprint('restaurant_api', __name__)
 
 @restaurant_api.route('/restaurant/<int:user_id>')
 def recommend_restaurant(user_id):
-    sql = 'SELECT user_id, res_id, rating FROM rating_restaurant'
-    ds = read_data_from_db(sql, None)
+    try:
+        sql = 'SELECT user_id, res_id, rating FROM rating_restaurant'
+        ds = read_data_from_db(sql, None)
 
-    reader = Reader()
-    data = Dataset.load_from_df(ds[['user_id', 'res_id', 'rating']], reader=reader)
-    alg = SVD()
-    alg.fit(data.build_full_trainset())
+        if len(ds) > 0:
+            reader = Reader()
+            data = Dataset.load_from_df(ds[['user_id', 'res_id', 'rating']], reader=reader)
+            alg = SVD()
+            alg.fit(data.build_full_trainset())
 
-    iids = ds['res_id'].unique()
-    rated_iids = ds.loc[ds['user_id'] == user_id, 'res_id']
-    iids_to_pred = np.setdiff1d(iids, rated_iids)
-    testset = [[user_id, iid, 4.] for iid in iids_to_pred]
-    predictions = alg.test(testset)
-    predictions.sort(key=lambda x: x.est, reverse=True)
-    list_of_ids = []
-    for i in range(50):
-        list_of_ids.append(int(predictions[i].iid))
-    similar_restaurants = get_list_db_objects_from_ids(tuple(list_of_ids))
-    return Response(similar_restaurants.to_json(orient="records"), mimetype='application/json')
+            iids = ds['res_id'].unique()
+            rated_iids = ds.loc[ds['user_id'] == user_id, 'res_id']
+            iids_to_pred = np.setdiff1d(iids, rated_iids)
+            testset = [[user_id, iid, 4.] for iid in iids_to_pred]
+            predictions = alg.test(testset)
+            predictions.sort(key=lambda x: x.est, reverse=True)
+            list_of_ids = []
+            for i in range(50):
+                list_of_ids.append(int(predictions[i].iid))
+            similar_restaurants = get_list_db_objects_from_ids(tuple(list_of_ids))
+            return Response(similar_restaurants.to_json(orient="records"), mimetype='application/json')
+        return "not found", 400
+    except:
+        return "", 500
 
 
 @restaurant_api.route('/restaurant/detail/<int:restaurant_id>')
 def recommend_similar_restaurant(restaurant_id):
-    df_cat_per_item = get_cat_per_item()
+    try:
+        df_cat_per_item = get_cat_per_item()
 
-    restaurant_profile = get_item_profile(df_cat_per_item)
-    simi_items = restaurant_profile.iloc[restaurant_id-1].sort_values(ascending=False)[:20]
-    simi_items = tuple(int(x+1) for x in simi_items.index.values)
-    similar_restaurants = get_list_db_objects_from_ids(simi_items)
-    return Response(similar_restaurants.to_json(orient="records"), mimetype='application/json')
+        if len(df_cat_per_item) > 0:
+            restaurant_profile = get_item_profile(df_cat_per_item)
+            simi_items = restaurant_profile.iloc[restaurant_id-1].sort_values(ascending=False)[:20]
+            simi_items = tuple(int(x+1) for x in simi_items.index.values)
+            similar_restaurants = get_list_db_objects_from_ids(simi_items)
+            return Response(similar_restaurants.to_json(orient="records"), mimetype='application/json')
+        return "not found", 404
+    except:
+        return "", 500
 
 
 @restaurant_api.route('/restaurant/similarity/<int:user_id>')
 def recommend_similar_restaurant_user_viewed(user_id):
-    sql = "SELECT count(*) as times, rest_id as res_id FROM restaurant_user_log where user_id=%(user_id)s and rest_id!='' group by rest_id;"
-    params = {"user_id" : int(user_id)}
-    ds = read_data_from_db(sql, params)
+    try:
+        sql = "SELECT count(*) as times, rest_id as res_id FROM restaurant_user_log where user_id=%(user_id)s and rest_id!='' group by rest_id;"
+        params = {"user_id" : int(user_id)}
+        ds = read_data_from_db(sql, params)
 
-    df_cat_per_item = get_cat_per_item()
-    user_data_with_cat_of_items = df_cat_per_item.reset_index().merge(ds, on='res_id')
-    recommendations = get_user_profile(user_data_with_cat_of_items, df_cat_per_item)
-    print(df_cat_per_item['item_cats'][recommendations])
-    simi_items = tuple(int(x+1) for x in recommendations)
-    similar_restaurants = get_list_db_objects_from_ids(simi_items)
-    return Response(similar_restaurants.to_json(orient="records"), mimetype='application/json')
+        if len(ds) > 0:
+            df_cat_per_item = get_cat_per_item()
+            user_data_with_cat_of_items = df_cat_per_item.reset_index().merge(ds, on='res_id')
+            recommendations = get_user_profile(user_data_with_cat_of_items, df_cat_per_item)
+            print(df_cat_per_item['item_cats'][recommendations])
+            simi_items = tuple(int(x+1) for x in recommendations)
+            similar_restaurants = get_list_db_objects_from_ids(simi_items)
+            return Response(similar_restaurants.to_json(orient="records"), mimetype='application/json')
+        return "not found", 404
+    except:
+        return "", 500
 
 
 def get_cat_per_item():

@@ -16,52 +16,67 @@ tour_api = Blueprint('tour_api', __name__)
 
 @tour_api.route('/tour/<int:user_id>')
 def recommend_tour(user_id):
-    sql = 'SELECT user_id, tour_id, rating FROM rating_tour'
-    ds = read_data_from_db(sql, None)
+    try:
+        sql = 'SELECT user_id, tour_id, rating FROM rating_tour'
+        ds = read_data_from_db(sql, None)
 
-    reader = Reader()
-    data = Dataset.load_from_df(ds[['user_id', 'tour_id', 'rating']], reader=reader)
-    alg = SVD()
-    alg.fit(data.build_full_trainset())
+        if len(ds) > 0:
+            reader = Reader()
+            data = Dataset.load_from_df(ds[['user_id', 'tour_id', 'rating']], reader=reader)
+            alg = SVD()
+            alg.fit(data.build_full_trainset())
 
-    iids = ds['tour_id'].unique()
-    rated_iids = ds.loc[ds['user_id'] == user_id, 'tour_id']
-    iids_to_pred = np.setdiff1d(iids, rated_iids)
-    print(iids_to_pred)
-    testset = [[user_id, iid, 4.] for iid in iids_to_pred]
-    predictions = alg.test(testset)
-    predictions.sort(key=lambda x: x.est, reverse=True)
-    list_of_ids = []
-    for i in range(50):
-        list_of_ids.append(int(predictions[i].iid))
-    similar_tours = get_list_db_objects_from_ids(tuple(list_of_ids))
-    return Response(similar_tours.to_json(orient="records"), mimetype='application/json')
+            iids = ds['tour_id'].unique()
+            rated_iids = ds.loc[ds['user_id'] == user_id, 'tour_id']
+            iids_to_pred = np.setdiff1d(iids, rated_iids)
+            print(iids_to_pred)
+            testset = [[user_id, iid, 4.] for iid in iids_to_pred]
+            predictions = alg.test(testset)
+            predictions.sort(key=lambda x: x.est, reverse=True)
+            list_of_ids = []
+            for i in range(50):
+                list_of_ids.append(int(predictions[i].iid))
+            similar_tours = get_list_db_objects_from_ids(tuple(list_of_ids))
+            return Response(similar_tours.to_json(orient="records"), mimetype='application/json')
+        return "not found", 404
+    except:
+        return "", 500
 
 
 @tour_api.route('/tour/detail/<int:tour_id>')
 def recommend_similar_tour(tour_id):
-    df_cat_per_item = get_cat_per_item()
+    try:
+        df_cat_per_item = get_cat_per_item()
 
-    tour_profile = get_item_profile(df_cat_per_item)
-    simi_items = tour_profile.iloc[tour_id-1].sort_values(ascending=False)[:20]
-    simi_items = tuple(int(x+1) for x in simi_items.index.values)
-    similar_tours = get_list_db_objects_from_ids(simi_items)
-    return Response(similar_tours.to_json(orient="records"), mimetype='application/json')
+        if len(df_cat_per_item) > 0:
+            tour_profile = get_item_profile(df_cat_per_item)
+            simi_items = tour_profile.iloc[tour_id-1].sort_values(ascending=False)[:20]
+            simi_items = tuple(int(x+1) for x in simi_items.index.values)
+            similar_tours = get_list_db_objects_from_ids(simi_items)
+            return Response(similar_tours.to_json(orient="records"), mimetype='application/json')
+        return "not found", 404
+    except:
+        return "", 500
 
 
 @tour_api.route('/tour/similarity/<int:user_id>')
 def recommend_similar_tour_user_viewed(user_id):
-    sql = "SELECT count(*) as times, tour_id FROM tour_user_log where user_id=%(user_id)s and tour_id!='' group by tour_id;"
-    params = {"user_id" : int(user_id)}
-    ds = read_data_from_db(sql, params)
+    try:
+        sql = "SELECT count(*) as times, tour_id FROM tour_user_log where user_id=%(user_id)s and tour_id!='' group by tour_id;"
+        params = {"user_id" : int(user_id)}
+        ds = read_data_from_db(sql, params)
 
-    df_cat_per_item = get_cat_per_item()
-    user_data_with_cat_of_items = df_cat_per_item.reset_index().merge(ds, on='tour_id')
-    recommendations = get_user_profile(user_data_with_cat_of_items, df_cat_per_item)
-    print(df_cat_per_item['item_cats'][recommendations])
-    simi_items = tuple(int(x+1) for x in recommendations)
-    similar_tours = get_list_db_objects_from_ids(simi_items)
-    return Response(similar_tours.to_json(orient="records"), mimetype='application/json')
+        if len(ds) > 0:
+            df_cat_per_item = get_cat_per_item()
+            user_data_with_cat_of_items = df_cat_per_item.reset_index().merge(ds, on='tour_id')
+            recommendations = get_user_profile(user_data_with_cat_of_items, df_cat_per_item)
+            print(df_cat_per_item['item_cats'][recommendations])
+            simi_items = tuple(int(x+1) for x in recommendations)
+            similar_tours = get_list_db_objects_from_ids(simi_items)
+            return Response(similar_tours.to_json(orient="records"), mimetype='application/json')
+        return "not found", 404
+    except:
+        return "", 500
 
 
 def get_cat_per_item():

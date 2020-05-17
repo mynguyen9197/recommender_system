@@ -3,7 +3,7 @@ from dbconnect import load_from_db
 from dbconnect import read_data_from_db
 from recs.content_based import get_item_profile
 from recs.content_based import get_user_profile
-import json
+from recs.content_based import get_liked_cats_at_the_first_time
 import numpy as np
 from surprise import Dataset
 from surprise import Reader
@@ -14,7 +14,7 @@ from flask import Response
 restaurant_api = Blueprint('restaurant_api', __name__)
 
 
-@restaurant_api.route('/restaurant/<int:user_id>')
+@restaurant_api.route('/restaurant/collab/<int:user_id>')
 def recommend_restaurant(user_id):
     try:
         sql = 'SELECT user_id, res_id, rating FROM rating_restaurant'
@@ -38,7 +38,8 @@ def recommend_restaurant(user_id):
             similar_restaurants = get_list_db_objects_from_ids(tuple(list_of_ids))
             return Response(similar_restaurants.to_json(orient="records"), mimetype='application/json')
         return "not found", 400
-    except:
+    except Exception as e:
+        print(str(e))
         return "", 500
 
 
@@ -50,11 +51,12 @@ def recommend_similar_restaurant(restaurant_id):
         if len(df_cat_per_item) > 0:
             restaurant_profile = get_item_profile(df_cat_per_item)
             simi_items = restaurant_profile.iloc[restaurant_id-1].sort_values(ascending=False)[:20]
-            simi_items = tuple(int(x+1) for x in simi_items.index.values)
+            simi_items = tuple(int(x+1) for x in simi_items.index.values if x != restaurant_id-1)
             similar_restaurants = get_list_db_objects_from_ids(simi_items)
             return Response(similar_restaurants.to_json(orient="records"), mimetype='application/json')
         return "not found", 404
-    except:
+    except Exception as e:
+        print(str(e))
         return "", 500
 
 
@@ -64,17 +66,26 @@ def recommend_similar_restaurant_user_viewed(user_id):
         sql = "SELECT count(*) as times, rest_id as res_id FROM restaurant_user_log where user_id=%(user_id)s and rest_id!='' group by rest_id;"
         params = {"user_id" : int(user_id)}
         ds = read_data_from_db(sql, params)
+        sql2 = "SELECT event_type FROM restaurant_user_log where user_id=%(user_id)s and event_type!='VIEW_DETAIL';"
+        ds2 = read_data_from_db(sql2, params)
+        chosen_cats_as_string = ' '.join(set(map(lambda x: x.split(': ')[1], ds2['event_type'])))
 
-        if len(ds) > 0:
+        if (len(ds) < 0 and (not chosen_cats_as_string)):
+            return "not found", 404
+        else:
             df_cat_per_item = get_cat_per_item()
+            if chosen_cats_as_string:
+                get_liked_cats_at_the_first_time(chosen_cats_as_string, df_cat_per_item, ds)
+            
             user_data_with_cat_of_items = df_cat_per_item.reset_index().merge(ds, on='res_id')
             recommendations = get_user_profile(user_data_with_cat_of_items, df_cat_per_item)
             print(df_cat_per_item['item_cats'][recommendations])
             simi_items = tuple(int(x+1) for x in recommendations)
             similar_restaurants = get_list_db_objects_from_ids(simi_items)
             return Response(similar_restaurants.to_json(orient="records"), mimetype='application/json')
-        return "not found", 404
-    except:
+        
+    except Exception as e:
+        print(str(e))
         return "", 500
 
 

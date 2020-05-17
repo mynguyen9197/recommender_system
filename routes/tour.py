@@ -4,12 +4,13 @@ from dbconnect import read_data_from_db
 from recs.content_based import get_item_profile
 from recs.content_based import _concatenate_cats_of_item
 from recs.content_based import get_user_profile
-import json
+from recs.content_based import get_liked_cats_at_the_first_time
 import numpy as np
 from surprise import Dataset
 from surprise import Reader
 from surprise import SVD
 from flask import Response
+import pandas as pd
 
 tour_api = Blueprint('tour_api', __name__)
 
@@ -39,7 +40,8 @@ def recommend_tour(user_id):
             similar_tours = get_list_db_objects_from_ids(tuple(list_of_ids))
             return Response(similar_tours.to_json(orient="records"), mimetype='application/json')
         return "not found", 404
-    except:
+    except Exception as e:
+        print(str(e))
         return "", 500
 
 
@@ -51,11 +53,12 @@ def recommend_similar_tour(tour_id):
         if len(df_cat_per_item) > 0:
             tour_profile = get_item_profile(df_cat_per_item)
             simi_items = tour_profile.iloc[tour_id-1].sort_values(ascending=False)[:20]
-            simi_items = tuple(int(x+1) for x in simi_items.index.values)
+            simi_items = tuple(int(x+1) for x in simi_items.index.values if x!= tour_id-1)
             similar_tours = get_list_db_objects_from_ids(simi_items)
             return Response(similar_tours.to_json(orient="records"), mimetype='application/json')
         return "not found", 404
-    except:
+    except Exception as e:
+        print(str(e))
         return "", 500
 
 
@@ -65,17 +68,25 @@ def recommend_similar_tour_user_viewed(user_id):
         sql = "SELECT count(*) as times, tour_id FROM tour_user_log where user_id=%(user_id)s and tour_id!='' group by tour_id;"
         params = {"user_id" : int(user_id)}
         ds = read_data_from_db(sql, params)
+        sql2 = "SELECT event_type FROM tour_user_log where user_id=%(user_id)s and event_type!='VIEW_DETAIL';"
+        ds2 = read_data_from_db(sql2, params)
+        chosen_cats_as_string = ' '.join(set(map(lambda x: x.split(': ')[1], ds2['event_type'])))
 
-        if len(ds) > 0:
+        if (len(ds) < 0 and (not chosen_cats_as_string)):
+            return "not found", 404
+        else:
             df_cat_per_item = get_cat_per_item()
+            if chosen_cats_as_string:
+                get_liked_cats_at_the_first_time(chosen_cats_as_string, df_cat_per_item, ds)
+            
             user_data_with_cat_of_items = df_cat_per_item.reset_index().merge(ds, on='tour_id')
             recommendations = get_user_profile(user_data_with_cat_of_items, df_cat_per_item)
             print(df_cat_per_item['item_cats'][recommendations])
             simi_items = tuple(int(x+1) for x in recommendations)
             similar_tours = get_list_db_objects_from_ids(simi_items)
             return Response(similar_tours.to_json(orient="records"), mimetype='application/json')
-        return "not found", 404
-    except:
+    except Exception as e:
+        print(str(e))
         return "", 500
 
 

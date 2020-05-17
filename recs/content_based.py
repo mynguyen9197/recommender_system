@@ -24,7 +24,21 @@ def get_user_profile(user_data_with_cat_of_items, df_cat_per_item):
     df_items_tf_idf_cats = tf_idf.fit_transform(df_cat_per_item.item_cats)
     user_profile = np.dot(df_items_tf_idf_cats[user_data_with_cat_of_items['index'].values].toarray().T, 
             user_data_with_cat_of_items['weight'].values)
+    print(df_items_tf_idf_cats[user_data_with_cat_of_items['index'].values].toarray().T.shape)
+    print(user_data_with_cat_of_items['weight'].values.shape)
+    print(user_profile.shape)
+    print(df_items_tf_idf_cats.shape)
+    print(np.atleast_2d(user_profile).shape)
     C = cosine_similarity(np.atleast_2d(user_profile), df_items_tf_idf_cats)
+    print(C.shape)
     R = np.argsort(C)[:, ::-1]
     recommendations = [i for i in R[0] if i not in user_data_with_cat_of_items['index'].values]
     return recommendations
+
+
+def get_liked_cats_at_the_first_time(chosen_cats_as_string, df_cat_per_item, df_times_per_item):
+    item_id = 0 if df_cat_per_item.empty else len(df_cat_per_item)
+    new_row_of_cat_per_item = [item_id, chosen_cats_as_string]
+    new_row_of_times_per_item = [5, item_id]
+    df_cat_per_item.loc[len(df_cat_per_item)] = new_row_of_cat_per_item
+    df_times_per_item.loc[len(df_times_per_item)] = new_row_of_times_per_item

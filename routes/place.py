@@ -15,7 +15,7 @@ from flask import Response
 place_api = Blueprint('place_api', __name__)
 
 
-@place_api.route('/place/<int:user_id>')
+@place_api.route('/place/collab/<int:user_id>')
 def recommend_place(user_id):
     try:
         sql = 'SELECT user_id, place_id, rating FROM rating_place'

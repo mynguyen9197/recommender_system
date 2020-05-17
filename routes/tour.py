@@ -15,7 +15,7 @@ import pandas as pd
 tour_api = Blueprint('tour_api', __name__)
 
 
-@tour_api.route('/tour/<int:user_id>')
+@tour_api.route('/tour/collab/<int:user_id>')
 def recommend_tour(user_id):
     try:
         sql = 'SELECT user_id, tour_id, rating FROM rating_tour'

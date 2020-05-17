@@ -14,7 +14,7 @@ from flask import Response
 restaurant_api = Blueprint('restaurant_api', __name__)
 
 
-@restaurant_api.route('/restaurant/<int:user_id>')
+@restaurant_api.route('/restaurant/collab/<int:user_id>')
 def recommend_restaurant(user_id):
     try:
         sql = 'SELECT user_id, res_id, rating FROM rating_restaurant'

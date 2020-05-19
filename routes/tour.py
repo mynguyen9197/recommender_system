@@ -38,7 +38,7 @@ def recommend_tour(user_id):
             for i in range(50):
                 list_of_ids.append(int(predictions[i].iid))
             similar_tours = get_list_db_objects_from_ids(tuple(list_of_ids))
-            return Response(similar_tours.to_json(orient="records"), mimetype='application/json')
+            return Response(similar_tours.to_json(orient="records"), status=200, mimetype='application/json')
         return "not found", 404
     except Exception as e:
         print(str(e))
@@ -55,7 +55,7 @@ def recommend_similar_tour(tour_id):
             simi_items = tour_profile.iloc[tour_id-1].sort_values(ascending=False)[:20]
             simi_items = tuple(int(x+1) for x in simi_items.index.values if x!= tour_id-1)
             similar_tours = get_list_db_objects_from_ids(simi_items)
-            return Response(similar_tours.to_json(orient="records"), mimetype='application/json')
+            return Response(similar_tours.to_json(orient="records"), status=200, mimetype='application/json')
         return "not found", 404
     except Exception as e:
         print(str(e))
@@ -84,7 +84,7 @@ def recommend_similar_tour_user_viewed(user_id):
             print(df_cat_per_item['item_cats'][recommendations])
             simi_items = tuple(int(x+1) for x in recommendations)
             similar_tours = get_list_db_objects_from_ids(simi_items)
-            return Response(similar_tours.to_json(orient="records"), mimetype='application/json')
+            return Response(similar_tours.to_json(orient="records"), status=200, mimetype='application/json')
     except Exception as e:
         print(str(e))
         return "", 500

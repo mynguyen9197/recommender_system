@@ -36,7 +36,7 @@ def recommend_restaurant(user_id):
             for i in range(50):
                 list_of_ids.append(int(predictions[i].iid))
             similar_restaurants = get_list_db_objects_from_ids(tuple(list_of_ids))
-            return Response(similar_restaurants.to_json(orient="records"), mimetype='application/json')
+            return Response(similar_restaurants.to_json(orient="records"), status=200, mimetype='application/json')
         return "not found", 400
     except Exception as e:
         print(str(e))
@@ -53,7 +53,7 @@ def recommend_similar_restaurant(restaurant_id):
             simi_items = restaurant_profile.iloc[restaurant_id-1].sort_values(ascending=False)[:20]
             simi_items = tuple(int(x+1) for x in simi_items.index.values if x != restaurant_id-1)
             similar_restaurants = get_list_db_objects_from_ids(simi_items)
-            return Response(similar_restaurants.to_json(orient="records"), mimetype='application/json')
+            return Response(similar_restaurants.to_json(orient="records"), status=200, mimetype='application/json')
         return "not found", 404
     except Exception as e:
         print(str(e))
@@ -82,7 +82,7 @@ def recommend_similar_restaurant_user_viewed(user_id):
             print(df_cat_per_item['item_cats'][recommendations])
             simi_items = tuple(int(x+1) for x in recommendations)
             similar_restaurants = get_list_db_objects_from_ids(simi_items)
-            return Response(similar_restaurants.to_json(orient="records"), mimetype='application/json')
+            return Response(similar_restaurants.to_json(orient="records"), status=200, mimetype='application/json')
         
     except Exception as e:
         print(str(e))

@@ -37,7 +37,7 @@ def recommend_place(user_id):
             for i in range(50 if len(predictions) >= 50 else len(predictions)):
                 list_of_ids.append(int(predictions[i].iid))
             similar_places = get_list_db_objects_from_ids(tuple(list_of_ids))
-            return Response(similar_places.to_json(orient="records"), mimetype='application/json')
+            return Response(similar_places.to_json(orient="records"), status=200, mimetype='application/json')
         return "not found", 404
     except:
         return "", 500
@@ -52,7 +52,7 @@ def recommend_similar_place(place_id):
         simi_items = place_profile.iloc[place_id-1].sort_values(ascending=False)[:20]
         simi_items = tuple(int(x+1) for x in simi_items.index.values if x != place_id-1)
         similar_places = get_list_db_objects_from_ids(simi_items)
-        return Response(similar_places.to_json(orient="records"), mimetype='application/json')
+        return Response(similar_places.to_json(orient="records"), sttaus=200, mimetype='application/json')
     except:
         return "", 500
 
@@ -79,7 +79,7 @@ def recommend_similar_place_user_viewed(user_id):
             print(df_cat_per_item['item_cats'][recommendations])
             simi_items = tuple(int(x+1) for x in recommendations)
             similar_places = get_list_db_objects_from_ids(simi_items)
-            return Response(similar_places.to_json(orient="records"), mimetype='application/json')
+            return Response(similar_places.to_json(orient="records"), sttaus=200, mimetype='application/json')
     except:
         return "", 500
 

@@ -81,8 +81,9 @@ def recommend_similar_tour_user_viewed(user_id):
             
             user_data_with_cat_of_items = df_cat_per_item.reset_index().merge(ds, on='tour_id')
             recommendations = get_user_profile(user_data_with_cat_of_items, df_cat_per_item)
+            tour_ids = df_cat_per_item.loc[recommendations, 'tour_id'].tolist()
             print(df_cat_per_item['item_cats'][recommendations])
-            simi_items = tuple(int(x+1) for x in recommendations)
+            simi_items = tuple(int(x) for x in tour_ids)
             similar_tours = get_list_db_objects_from_ids(simi_items)
             return Response(similar_tours.to_json(orient="records"), status=200, mimetype='application/json')
     except Exception as e:

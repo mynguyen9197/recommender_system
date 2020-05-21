@@ -69,8 +69,6 @@ def recommend_similar_place_user_viewed(user_id):
         ds2 = read_data_from_db(sql2, params)
         chosen_cats_as_string = ' '.join(set(map(lambda x: x.split(': ')[1], ds2['event_type'])))
 
-        print(len(ds))
-        print(chosen_cats_as_string)
         if (len(ds) == 0 and (not chosen_cats_as_string)):
             return "not found", 404
         else:
@@ -80,8 +78,9 @@ def recommend_similar_place_user_viewed(user_id):
             
             user_data_with_cat_of_items = df_cat_per_item.reset_index().merge(ds, on='place_id')
             recommendations = get_user_profile(user_data_with_cat_of_items, df_cat_per_item)
+            place_ids = df_cat_per_item.loc[recommendations, 'place_id'].tolist()
             print(df_cat_per_item['item_cats'][recommendations])
-            simi_items = tuple(int(x+1) for x in recommendations)
+            simi_items = tuple(int(x) for x in place_ids)
             similar_places = get_list_db_objects_from_ids(simi_items)
             return Response(similar_places.to_json(orient="records"), status=200, mimetype='application/json')
     except Exception as e:

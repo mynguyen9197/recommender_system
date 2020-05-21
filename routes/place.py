@@ -39,7 +39,8 @@ def recommend_place(user_id):
             similar_places = get_list_db_objects_from_ids(tuple(list_of_ids))
             return Response(similar_places.to_json(orient="records"), status=200, mimetype='application/json')
         return "not found", 404
-    except:
+    except Exception as e:
+        print(str(e))
         return "", 500
     
 
@@ -52,8 +53,9 @@ def recommend_similar_place(place_id):
         simi_items = place_profile.iloc[place_id-1].sort_values(ascending=False)[:20]
         simi_items = tuple(int(x+1) for x in simi_items.index.values if x != place_id-1)
         similar_places = get_list_db_objects_from_ids(simi_items)
-        return Response(similar_places.to_json(orient="records"), sttaus=200, mimetype='application/json')
-    except:
+        return Response(similar_places.to_json(orient="records"), status=200, mimetype='application/json')
+    except Exception as e:
+        print(str(e))
         return "", 500
 
 
@@ -67,7 +69,9 @@ def recommend_similar_place_user_viewed(user_id):
         ds2 = read_data_from_db(sql2, params)
         chosen_cats_as_string = ' '.join(set(map(lambda x: x.split(': ')[1], ds2['event_type'])))
 
-        if (len(ds) < 0 and (not chosen_cats_as_string)):
+        print(len(ds))
+        print(chosen_cats_as_string)
+        if (len(ds) == 0 and (not chosen_cats_as_string)):
             return "not found", 404
         else:
             df_cat_per_item = get_cat_per_item()
@@ -79,8 +83,9 @@ def recommend_similar_place_user_viewed(user_id):
             print(df_cat_per_item['item_cats'][recommendations])
             simi_items = tuple(int(x+1) for x in recommendations)
             similar_places = get_list_db_objects_from_ids(simi_items)
-            return Response(similar_places.to_json(orient="records"), sttaus=200, mimetype='application/json')
-    except:
+            return Response(similar_places.to_json(orient="records"), status=200, mimetype='application/json')
+    except Exception as e:
+        print(str(e))
         return "", 500
 
 
@@ -97,6 +102,6 @@ def get_cat_per_item ():
 def get_list_db_objects_from_ids(tuple_of_item):
     simi_items_as_string=','.join(map(str,tuple_of_item))
     get_simi_items_query = "SELECT * FROM place where id in %(simi_items)s ORDER BY FIND_IN_SET(id, %(ordered_list)s);"
-    params = {"simi_items" : tuple_of_item, "ordered_list": simi_items_as_string}
+    params = {"simi_items": tuple_of_item, "ordered_list": simi_items_as_string}
     ds = read_data_from_db(get_simi_items_query, params)
     return ds

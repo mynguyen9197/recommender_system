@@ -70,7 +70,7 @@ def recommend_similar_restaurant_user_viewed(user_id):
         ds2 = read_data_from_db(sql2, params)
         chosen_cats_as_string = ' '.join(set(map(lambda x: x.split(': ')[1], ds2['event_type'])))
 
-        if (len(ds) < 0 and (not chosen_cats_as_string)):
+        if (len(ds) == 0 and (not chosen_cats_as_string)):
             return "not found", 404
         else:
             df_cat_per_item = get_cat_per_item()

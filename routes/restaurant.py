@@ -50,9 +50,11 @@ def recommend_similar_restaurant(restaurant_id):
 
         if len(df_cat_per_item) > 0:
             restaurant_profile = get_item_profile(df_cat_per_item)
-            simi_items = restaurant_profile.iloc[restaurant_id-1].sort_values(ascending=False)[:20]
-            simi_items = tuple(int(x+1) for x in simi_items.index.values if x != restaurant_id-1)
-            similar_restaurants = get_list_db_objects_from_ids(simi_items)
+            index = df_cat_per_item.index[df_cat_per_item['res_id'] == restaurant_id].tolist()[0]
+            simi_items_index = restaurant_profile.iloc[index].sort_values(ascending=False)[:20].index.tolist()
+            restaurant_ids = df_cat_per_item.loc[simi_items_index, 'res_id'].tolist()
+            restaurant_ids.remove(restaurant_id)
+            similar_restaurants = get_list_db_objects_from_ids(restaurant_ids)
             return Response(similar_restaurants.to_json(orient="records"), status=200, mimetype='application/json')
         return "not found", 404
     except Exception as e:

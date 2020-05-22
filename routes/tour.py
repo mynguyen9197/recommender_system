@@ -52,9 +52,11 @@ def recommend_similar_tour(tour_id):
 
         if len(df_cat_per_item) > 0:
             tour_profile = get_item_profile(df_cat_per_item)
-            simi_items = tour_profile.iloc[tour_id-1].sort_values(ascending=False)[:20]
-            simi_items = tuple(int(x+1) for x in simi_items.index.values if x!= tour_id-1)
-            similar_tours = get_list_db_objects_from_ids(simi_items)
+            index = df_cat_per_item.index[df_cat_per_item['tour_id'] == tour_id].tolist()[0]
+            simi_items_index = tour_profile.iloc[index].sort_values(ascending=False)[:20].index.tolist()
+            tour_ids = df_cat_per_item.loc[simi_items_index, 'tour_id'].tolist()
+            tour_ids.remove(tour_id)
+            similar_tours = get_list_db_objects_from_ids(tour_ids)
             return Response(similar_tours.to_json(orient="records"), status=200, mimetype='application/json')
         return "not found", 404
     except Exception as e:

@@ -48,12 +48,15 @@ def recommend_place(user_id):
 def recommend_similar_place(place_id):
     try:
         df_cat_per_item = get_cat_per_item()
-
-        place_profile = get_item_profile(df_cat_per_item)
-        simi_items = place_profile.iloc[place_id-1].sort_values(ascending=False)[:20]
-        simi_items = tuple(int(x+1) for x in simi_items.index.values if x != place_id-1)
-        similar_places = get_list_db_objects_from_ids(simi_items)
-        return Response(similar_places.to_json(orient="records"), status=200, mimetype='application/json')
+        if len(df_cat_per_item) > 0:
+            place_profile = get_item_profile(df_cat_per_item)
+            index = df_cat_per_item.index[df_cat_per_item['place_id'] == place_id].tolist()[0]
+            simi_items_index = place_profile.iloc[index].sort_values(ascending=False)[:20].index.tolist()
+            place_ids = df_cat_per_item.loc[simi_items_index, 'place_id'].tolist()
+            place_ids.remove(place_id)
+            similar_places = get_list_db_objects_from_ids(place_ids)
+            return Response(similar_places.to_json(orient="records"), status=200, mimetype='application/json')
+        return "not found", 404
     except Exception as e:
         print(str(e))
         return "", 500

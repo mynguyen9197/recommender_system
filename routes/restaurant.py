@@ -50,7 +50,7 @@ def recommend_similar_restaurant(restaurant_id):
             index = df_cat_per_item.index[df_cat_per_item['res_id'] == restaurant_id].tolist()[0]
             simi_items_index = restaurant_profile.iloc[index].sort_values(ascending=False)[:20].index.tolist()
             restaurant_ids = df_cat_per_item.loc[simi_items_index, 'res_id'].tolist()
-            restaurant_ids.remove(restaurant_id)
+            if restaurant_id in restaurant_ids: restaurant_ids.remove(restaurant_id)
             similar_restaurants = get_list_db_objects_from_ids(restaurant_ids)
             return Response(similar_restaurants.to_json(orient="records"), status=200, mimetype='application/json')
         return "not found", 404

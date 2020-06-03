@@ -50,7 +50,7 @@ def recommend_similar_tour(tour_id):
             index = df_cat_per_item.index[df_cat_per_item['tour_id'] == tour_id].tolist()[0]
             simi_items_index = tour_profile.iloc[index].sort_values(ascending=False)[:20].index.tolist()
             tour_ids = df_cat_per_item.loc[simi_items_index, 'tour_id'].tolist()
-            tour_ids.remove(tour_id)
+            if tour_id in tour_ids: tour_ids.remove(tour_id)
             similar_tours = get_list_db_objects_from_ids(tour_ids)
             return Response(similar_tours.to_json(orient="records"), status=200, mimetype='application/json')
         return "not found", 404

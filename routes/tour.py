@@ -28,21 +28,6 @@ def recommend_tour(user_id):
             testset = [[user_id, iid, 4.] for iid in iids_to_pred]
             predictions = alg.test(testset)
             evaluate_surprise_alg(predictions)
-
-            alg = NMF()
-            alg.fit(data.build_full_trainset())
-            predictions = alg.test(testset)
-            evaluate_surprise_alg(predictions)
-
-            alg = KNNBaseline()
-            alg.fit(data.build_full_trainset())
-            predictions = alg.test(testset)
-            evaluate_surprise_alg(predictions)
-
-            alg = SVDpp()
-            alg.fit(data.build_full_trainset())
-            predictions = alg.test(testset)
-            evaluate_surprise_alg(predictions)
             predictions.sort(key=lambda x: x.est, reverse=True)
             list_of_ids = []
             for i in range(50):

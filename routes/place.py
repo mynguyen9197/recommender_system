@@ -1,12 +1,16 @@
 from flask import Blueprint
-from dbconnect import load_from_db, read_data_from_db
-from recs.content_based import get_item_profile, _concatenate_cats_of_item, get_user_profile, get_liked_cats_at_the_first_time
-from recs.evaluate_prediction import evaluate_surprise_alg, evaluate_content_based
+from dbconnect import load_from_db
+from dbconnect import read_data_from_db
+from recs.content_based import get_item_profile
+from recs.content_based import _concatenate_cats_of_item
+from recs.content_based import get_user_profile
+from recs.content_based import get_liked_cats_at_the_first_time
 import numpy as np
+from surprise import Dataset
+from surprise import Reader
+from surprise import SVD
 import pandas as pd
-from surprise import Dataset, accuracy, Reader, SVD, KNNBasic, KNNBaseline, SVDpp, NMF
 from flask import Response
-from surprise.model_selection import cross_validate
 
 place_api = Blueprint('place_api', __name__)
 
@@ -28,7 +32,6 @@ def recommend_place(user_id):
             iids_to_pred = np.setdiff1d(iids, rated_iids)
             testset = [[user_id, iid, 4.] for iid in iids_to_pred]
             predictions = alg.test(testset)
-            evaluate_surprise_alg(predictions)
             predictions.sort(key=lambda x: x.est, reverse=True)
             list_of_ids = []
             for i in range(50 if len(predictions) >= 50 else len(predictions)):
@@ -50,7 +53,7 @@ def recommend_similar_place(place_id):
             index = df_cat_per_item.index[df_cat_per_item['place_id'] == place_id].tolist()[0]
             simi_items_index = place_profile.iloc[index].sort_values(ascending=False)[:20].index.tolist()
             place_ids = df_cat_per_item.loc[simi_items_index, 'place_id'].tolist()
-            place_ids.remove(place_id)
+            if place_id in place_ids: place_ids.remove(place_id)
             similar_places = get_list_db_objects_from_ids(place_ids)
             return Response(similar_places.to_json(orient="records"), status=200, mimetype='application/json')
         return "not found", 404

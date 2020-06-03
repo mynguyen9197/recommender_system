@@ -1,14 +1,10 @@
 from flask import Blueprint
-from dbconnect import load_from_db
-from dbconnect import read_data_from_db
-from recs.content_based import get_item_profile
-from recs.content_based import get_user_profile
-from recs.content_based import get_liked_cats_at_the_first_time
+from dbconnect import load_from_db, read_data_from_db
+from recs.content_based import get_item_profile, get_user_profile, get_liked_cats_at_the_first_time
+from recs.evaluate_prediction import evaluate_surprise_alg
 import numpy as np
-from surprise import Dataset
-from surprise import Reader
-from surprise import SVD
 import pandas as pd
+from surprise import Dataset, accuracy, Reader, SVD, KNNBasic, KNNBaseline, SVDpp, NMF
 from flask import Response
 
 restaurant_api = Blueprint('restaurant_api', __name__)
@@ -31,6 +27,22 @@ def recommend_restaurant(user_id):
             iids_to_pred = np.setdiff1d(iids, rated_iids)
             testset = [[user_id, iid, 4.] for iid in iids_to_pred]
             predictions = alg.test(testset)
+            evaluate_surprise_alg(predictions)
+
+            alg = NMF()
+            alg.fit(data.build_full_trainset())
+            predictions = alg.test(testset)
+            evaluate_surprise_alg(predictions)
+
+            alg = KNNBaseline()
+            alg.fit(data.build_full_trainset())
+            predictions = alg.test(testset)
+            evaluate_surprise_alg(predictions)
+
+            alg = SVDpp()
+            alg.fit(data.build_full_trainset())
+            predictions = alg.test(testset)
+            evaluate_surprise_alg(predictions)
             predictions.sort(key=lambda x: x.est, reverse=True)
             list_of_ids = []
             for i in range(50):

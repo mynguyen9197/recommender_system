@@ -1,16 +1,12 @@
 from flask import Blueprint
-from dbconnect import load_from_db
-from dbconnect import read_data_from_db
-from recs.content_based import get_item_profile
-from recs.content_based import _concatenate_cats_of_item
-from recs.content_based import get_user_profile
-from recs.content_based import get_liked_cats_at_the_first_time
+from dbconnect import load_from_db, read_data_from_db
+from recs.content_based import get_item_profile, _concatenate_cats_of_item, get_user_profile, get_liked_cats_at_the_first_time
+from recs.evaluate_prediction import evaluate_surprise_alg, evaluate_content_based
 import numpy as np
-from surprise import Dataset
-from surprise import Reader
-from surprise import SVD
 import pandas as pd
+from surprise import Dataset, accuracy, Reader, SVD, KNNBasic, KNNBaseline, SVDpp, NMF
 from flask import Response
+from surprise.model_selection import cross_validate
 
 place_api = Blueprint('place_api', __name__)
 
@@ -32,6 +28,7 @@ def recommend_place(user_id):
             iids_to_pred = np.setdiff1d(iids, rated_iids)
             testset = [[user_id, iid, 4.] for iid in iids_to_pred]
             predictions = alg.test(testset)
+            evaluate_surprise_alg(predictions)
             predictions.sort(key=lambda x: x.est, reverse=True)
             list_of_ids = []
             for i in range(50 if len(predictions) >= 50 else len(predictions)):

@@ -1,14 +1,9 @@
 from flask import Blueprint
-from dbconnect import load_from_db
-from dbconnect import read_data_from_db
-from recs.content_based import get_item_profile
-from recs.content_based import _concatenate_cats_of_item
-from recs.content_based import get_user_profile
-from recs.content_based import get_liked_cats_at_the_first_time
+from dbconnect import load_from_db, read_data_from_db
+from recs.content_based import get_item_profile, _concatenate_cats_of_item, get_user_profile, get_liked_cats_at_the_first_time
+from recs.evaluate_prediction import evaluate_surprise_alg
 import numpy as np
-from surprise import Dataset
-from surprise import Reader
-from surprise import SVD
+from surprise import Dataset, accuracy, Reader, SVD, KNNBasic, KNNBaseline, SVDpp, NMF
 from flask import Response
 import pandas as pd
 
@@ -30,9 +25,24 @@ def recommend_tour(user_id):
             iids = ds['tour_id'].unique()
             rated_iids = ds.loc[ds['user_id'] == user_id, 'tour_id']
             iids_to_pred = np.setdiff1d(iids, rated_iids)
-            print(iids_to_pred)
             testset = [[user_id, iid, 4.] for iid in iids_to_pred]
             predictions = alg.test(testset)
+            evaluate_surprise_alg(predictions)
+
+            alg = NMF()
+            alg.fit(data.build_full_trainset())
+            predictions = alg.test(testset)
+            evaluate_surprise_alg(predictions)
+
+            alg = KNNBaseline()
+            alg.fit(data.build_full_trainset())
+            predictions = alg.test(testset)
+            evaluate_surprise_alg(predictions)
+
+            alg = SVDpp()
+            alg.fit(data.build_full_trainset())
+            predictions = alg.test(testset)
+            evaluate_surprise_alg(predictions)
             predictions.sort(key=lambda x: x.est, reverse=True)
             list_of_ids = []
             for i in range(50):

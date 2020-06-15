@@ -80,9 +80,11 @@ def recommend_similar_place_user_viewed(user_id):
                 get_liked_cats_at_the_first_time(chosen_cats_as_string, df_cat_per_item, ds)
             
             user_data_with_cat_of_items = df_cat_per_item.reset_index().merge(ds, on='place_id')
-            recommendations = get_user_profile(user_data_with_cat_of_items, df_cat_per_item)
+            recommendations, simi_list = get_user_profile(user_data_with_cat_of_items, df_cat_per_item)
             place_ids = df_cat_per_item.loc[recommendations, 'place_id'].tolist()
-            print(df_cat_per_item['item_cats'][recommendations])
+            recommended_items = df_cat_per_item['item_cats'][recommendations]
+            x = recommended_items.reset_index().join(simi_list)
+            print(x)
             simi_items = tuple(int(x) for x in place_ids)
             similar_places = get_list_db_objects_from_ids(simi_items)
             return Response(similar_places.to_json(orient="records"), status=200, mimetype='application/json')

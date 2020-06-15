@@ -33,7 +33,8 @@ def get_user_profile(user_data_with_cat_of_items, df_cat_per_item):
     # print(C.shape)
     R = np.argsort(C)[:, ::-1]
     recommendations = [i for i in R[0] if i not in user_data_with_cat_of_items['index'].values][:50]
-    return recommendations
+    # print(C.loc[recommendations])
+    return recommendations, pd.DataFrame(C[0][recommendations])
 
 
 def get_liked_cats_at_the_first_time(chosen_cats_as_string, df_cat_per_item, df_times_per_item):

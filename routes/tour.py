@@ -77,9 +77,11 @@ def recommend_similar_tour_user_viewed(user_id):
                 get_liked_cats_at_the_first_time(chosen_cats_as_string, df_cat_per_item, ds)
             
             user_data_with_cat_of_items = df_cat_per_item.reset_index().merge(ds, on='tour_id')
-            recommendations = get_user_profile(user_data_with_cat_of_items, df_cat_per_item)
+            recommendations, simi_list = get_user_profile(user_data_with_cat_of_items, df_cat_per_item)
             tour_ids = df_cat_per_item.loc[recommendations, 'tour_id'].tolist()
-            print(df_cat_per_item['item_cats'][recommendations])
+            recommended_items = df_cat_per_item['item_cats'][recommendations]
+            x = recommended_items.reset_index().join(simi_list)
+            print(x)
             simi_items = tuple(int(x) for x in tour_ids)
             similar_tours = get_list_db_objects_from_ids(simi_items)
             return Response(similar_tours.to_json(orient="records"), status=200, mimetype='application/json')

@@ -4,7 +4,7 @@ from dbconnect import read_data_from_db
 from recs.content_based import get_item_profile
 from recs.content_based import _concatenate_cats_of_item
 from recs.content_based import get_user_profile
-from recs.content_based import get_liked_cats_at_the_first_time
+from recs.evaluate_prediction import evaluate_surprise_alg
 import numpy as np
 from surprise import Dataset
 from surprise import Reader
@@ -32,6 +32,7 @@ def recommend_place(user_id):
             iids_to_pred = np.setdiff1d(iids, rated_iids)
             testset = [[user_id, iid, 4.] for iid in iids_to_pred]
             predictions = alg.test(testset)
+            evaluate_surprise_alg(predictions)
             predictions.sort(key=lambda x: x.est, reverse=True)
             list_of_ids = []
             for i in range(50 if len(predictions) >= 50 else len(predictions)):
@@ -80,9 +81,10 @@ def recommend_similar_place_user_viewed(user_id):
                 get_liked_cats_at_the_first_time(chosen_cats_as_string, df_cat_per_item, ds)
             
             user_data_with_cat_of_items = df_cat_per_item.reset_index().merge(ds, on='place_id')
+            print(user_data_with_cat_of_items)
             recommendations, simi_list = get_user_profile(user_data_with_cat_of_items, df_cat_per_item)
             place_ids = df_cat_per_item.loc[recommendations, 'place_id'].tolist()
-            recommended_items = df_cat_per_item['item_cats'][recommendations]
+            recommended_items = df_cat_per_item.loc[recommendations]
             x = recommended_items.reset_index().join(simi_list)
             print(x)
             simi_items = tuple(int(x) for x in place_ids)
@@ -109,3 +111,11 @@ def get_list_db_objects_from_ids(tuple_of_item):
     params = {"simi_items": tuple_of_item, "ordered_list": simi_items_as_string}
     ds = read_data_from_db(get_simi_items_query, params)
     return ds
+
+
+def get_liked_cats_at_the_first_time(chosen_cats_as_string, df_cat_per_item, df_times_per_item):
+    item_id = 0 if df_cat_per_item.empty else df_cat_per_item['place_id'].max() + 1
+    new_row_of_cat_per_item = [item_id, chosen_cats_as_string]
+    new_row_of_times_per_item = [5, item_id]
+    df_cat_per_item.loc[len(df_cat_per_item)] = new_row_of_cat_per_item
+    df_times_per_item.loc[len(df_times_per_item)] = new_row_of_times_per_item

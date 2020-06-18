@@ -1,6 +1,6 @@
 from flask import Blueprint
 from dbconnect import load_from_db, read_data_from_db
-from recs.content_based import get_item_profile, _concatenate_cats_of_item, get_user_profile, get_liked_cats_at_the_first_time
+from recs.content_based import get_item_profile, _concatenate_cats_of_item, get_user_profile
 from recs.evaluate_prediction import evaluate_surprise_alg
 import numpy as np
 from surprise import Dataset, accuracy, Reader, SVD, KNNBasic, KNNBaseline, SVDpp, NMF
@@ -8,7 +8,6 @@ from flask import Response
 import pandas as pd
 
 tour_api = Blueprint('tour_api', __name__)
-
 
 @tour_api.route('/tour/collab/<int:user_id>')
 def recommend_tour(user_id):
@@ -77,9 +76,10 @@ def recommend_similar_tour_user_viewed(user_id):
                 get_liked_cats_at_the_first_time(chosen_cats_as_string, df_cat_per_item, ds)
             
             user_data_with_cat_of_items = df_cat_per_item.reset_index().merge(ds, on='tour_id')
+            print(user_data_with_cat_of_items)
             recommendations, simi_list = get_user_profile(user_data_with_cat_of_items, df_cat_per_item)
             tour_ids = df_cat_per_item.loc[recommendations, 'tour_id'].tolist()
-            recommended_items = df_cat_per_item['item_cats'][recommendations]
+            recommended_items = df_cat_per_item.loc[recommendations]
             x = recommended_items.reset_index().join(simi_list)
             print(x)
             simi_items = tuple(int(x) for x in tour_ids)
@@ -106,3 +106,11 @@ def get_list_db_objects_from_ids(tuple_of_item):
     params = {"simi_items" : tuple_of_item, "ordered_list": simi_items_as_string}
     ds = read_data_from_db(get_simi_items_query, params)
     return ds
+
+
+def get_liked_cats_at_the_first_time(chosen_cats_as_string, df_cat_per_item, df_times_per_item):
+    item_id = 0 if df_cat_per_item.empty else df_cat_per_item['tour_id'].max() + 1
+    new_row_of_cat_per_item = [item_id, chosen_cats_as_string]
+    new_row_of_times_per_item = [5, item_id]
+    df_cat_per_item.loc[len(df_cat_per_item)] = new_row_of_cat_per_item
+    df_times_per_item.loc[len(df_times_per_item)] = new_row_of_times_per_item

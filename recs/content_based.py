@@ -35,11 +35,3 @@ def get_user_profile(user_data_with_cat_of_items, df_cat_per_item):
     recommendations = [i for i in R[0] if i not in user_data_with_cat_of_items['index'].values][:50]
     # print(C.loc[recommendations])
     return recommendations, pd.DataFrame(C[0][recommendations])
-
-
-def get_liked_cats_at_the_first_time(chosen_cats_as_string, df_cat_per_item, df_times_per_item):
-    item_id = 0 if df_cat_per_item.empty else len(df_cat_per_item)
-    new_row_of_cat_per_item = [item_id, chosen_cats_as_string]
-    new_row_of_times_per_item = [5, item_id]
-    df_cat_per_item.loc[len(df_cat_per_item)] = new_row_of_cat_per_item
-    df_times_per_item.loc[len(df_times_per_item)] = new_row_of_times_per_item

@@ -9,7 +9,7 @@ def _concatenate_cats_of_item(cats):
     return cats_as_str
 
 
-def get_item_profile(df_item):
+def similar_to_item(df_item):
     tf_idf = TfidfVectorizer()
     df_items_tf_idf_cats = tf_idf.fit_transform(df_item.item_cats)
     cosine_sim = cosine_similarity(df_items_tf_idf_cats)
@@ -17,7 +17,7 @@ def get_item_profile(df_item):
     return df_tfidf_m2m
     
 
-def get_user_profile(user_data_with_cat_of_items, df_cat_per_item):
+def similar_to_user_profile(user_data_with_cat_of_items, df_cat_per_item):
     max_times = user_data_with_cat_of_items['times'].max()
     user_data_with_cat_of_items['weight'] = user_data_with_cat_of_items['times']/max_times
     tf_idf = TfidfVectorizer()

@@ -1,9 +1,9 @@
 from flask import Blueprint
 from dbconnect import load_from_db
 from dbconnect import read_data_from_db
-from recs.content_based import get_item_profile
+from recs.content_based import similar_to_item
 from recs.content_based import _concatenate_cats_of_item
-from recs.content_based import get_user_profile
+from recs.content_based import similar_to_user_profile
 from recs.evaluate_prediction import evaluate_surprise_alg
 import numpy as np
 from surprise import Dataset
@@ -18,10 +18,13 @@ place_api = Blueprint('place_api', __name__)
 @place_api.route('/place/collab/<int:user_id>')
 def recommend_place(user_id):
     try:
+        find_user_rating = 'SELECT * FROM rating_place where user_id=%(user_id)s;'
+        params = {"user_id" : int(user_id)}
+        user_rating = read_data_from_db(find_user_rating, params)
         sql = 'SELECT user_id, place_id, rating FROM rating_place'
         ds = read_data_from_db(sql, None)
 
-        if len(ds) > 0:
+        if len(ds) > 0 and len(user_rating) >0:
             reader = Reader()
             data = Dataset.load_from_df(ds[['user_id', 'place_id', 'rating']], reader=reader)
             alg = SVD()
@@ -37,6 +40,7 @@ def recommend_place(user_id):
             list_of_ids = []
             for i in range(50 if len(predictions) >= 50 else len(predictions)):
                 list_of_ids.append(int(predictions[i].iid))
+                print(str(predictions[i].iid) + ' ' + str(predictions[i].est))
             similar_places = get_list_db_objects_from_ids(tuple(list_of_ids))
             return Response(similar_places.to_json(orient="records"), status=200, mimetype='application/json')
         return "not found", 404
@@ -50,7 +54,7 @@ def recommend_similar_place(place_id):
     try:
         df_cat_per_item = get_cat_per_item()
         if len(df_cat_per_item) > 0:
-            place_profile = get_item_profile(df_cat_per_item)
+            place_profile = similar_to_item(df_cat_per_item)
             index = df_cat_per_item.index[df_cat_per_item['place_id'] == place_id].tolist()[0]
             simi_items_index = place_profile.iloc[index].sort_values(ascending=False)[:20].index.tolist()
             place_ids = df_cat_per_item.loc[simi_items_index, 'place_id'].tolist()
@@ -82,7 +86,7 @@ def recommend_similar_place_user_viewed(user_id):
             
             user_data_with_cat_of_items = df_cat_per_item.reset_index().merge(ds, on='place_id')
             print(user_data_with_cat_of_items)
-            recommendations, simi_list = get_user_profile(user_data_with_cat_of_items, df_cat_per_item)
+            recommendations, simi_list = similar_to_user_profile(user_data_with_cat_of_items, df_cat_per_item)
             place_ids = df_cat_per_item.loc[recommendations, 'place_id'].tolist()
             recommended_items = df_cat_per_item.loc[recommendations]
             x = recommended_items.reset_index().join(simi_list)

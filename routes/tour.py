@@ -18,7 +18,7 @@ def recommend_tour(user_id):
         sql = 'SELECT user_id, tour_id, rating FROM rating_tour'
         ds = read_data_from_db(sql, None)
 
-        if len(ds) > 0 and len(find_user_rating) > 0:
+        if len(ds) > 0 and len(user_rating) > 0:
             reader = Reader()
             data = Dataset.load_from_df(ds[['user_id', 'tour_id', 'rating']], reader=reader)
             alg = SVD()

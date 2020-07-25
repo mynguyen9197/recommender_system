@@ -35,7 +35,7 @@ def recommend_restaurant(user_id):
             list_of_ids = []
             for i in range(50):
                 list_of_ids.append(int(predictions[i].iid))
-                print(str(predictions[i].iid) + ' ' + str(predictions[i].est))
+                # print(str(predictions[i].iid) + ' ' + str(predictions[i].est))
             similar_restaurants = get_list_db_objects_from_ids(tuple(list_of_ids))
             return Response(similar_restaurants.to_json(orient="records"), status=200, mimetype='application/json')
         return "not found", 400
@@ -81,12 +81,12 @@ def recommend_similar_restaurant_user_viewed(user_id):
                 get_liked_cats_at_the_first_time(chosen_cats_as_string, df_cat_per_item, ds)
             
             user_data_with_cat_of_items = df_cat_per_item.reset_index().merge(ds, on='res_id')
-            print(user_data_with_cat_of_items)
+            # print(user_data_with_cat_of_items)
             recommendations, simi_list = similar_to_user_profile(user_data_with_cat_of_items, df_cat_per_item)
             rest_ids = df_cat_per_item.loc[recommendations, 'res_id'].tolist()
             recommended_items = df_cat_per_item.loc[recommendations]
             x = recommended_items.reset_index().join(simi_list)
-            print(x)
+            # print(x)
             simi_items = tuple(int(x) for x in rest_ids)
             similar_restaurants = get_list_db_objects_from_ids(simi_items)
             return Response(similar_restaurants.to_json(orient="records"), status=200, mimetype='application/json')
